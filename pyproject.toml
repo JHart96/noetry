@@ -3,10 +3,10 @@ requires = ["setuptools", "wheel"]
 
 [project]
 name = "noetry"
-version = "0.1.0"
+version = "1.0.0"
 description = "A simple package management tool."
 authors = [{ name = "Jordan Hart", email = "jordan.da.hart@gmail.com" }]
-dependencies = ["pyyaml", "toml"]
+dependencies = ["toml"]
 
 [project.scripts]
 noetry = "noetry.__main__:main"

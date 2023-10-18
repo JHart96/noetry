@@ -2,22 +2,17 @@ import os
 import sys
 import subprocess
 import venv
-import yaml
 import toml
 
-NOETRY_YML = '.noetry.yml'
 
-
-def get_project_config(project_dir):
-    with open(os.path.join(project_dir, NOETRY_YML), 'r') as file:
-        return yaml.safe_load(file)
-
-
-def create_virtualenv(project_dir):
+def create_virtualenv(project_dir, python_version="3.10"):
     venv_dir = os.path.join(project_dir, '.venv')
 
-    venv.create(venv_dir, with_pip=True)
+    subprocess.run([f"python{python_version}", "-m", "venv", venv_dir])
     print(f"Created virtual environment at: {venv_dir}")
+
+    print("Installing requirements...")
+    install_requirements(project_dir)
 
 
 def delete_virtualenv(project_dir):
@@ -73,22 +68,29 @@ def get_pip_exe(venv_dir):
 
 
 def init_project(project_dir):
-    config_path = os.path.join(project_dir, NOETRY_YML)
-    if os.path.exists(config_path):
-        print(f"{NOETRY_YML} already exists.")
+
+    # Check if virtual environment already exists
+    venv_dir = os.path.join(project_dir, '.venv')
+    if os.path.exists(venv_dir):
+        print("💥 Error: A virtual environment already exists in this project. If you want to reinitialize the project, please delete the .venv directory first.")
         return
 
-    default_config = {
-        "python_version": "3.9"  # Or whatever default you prefer
-    }
-
-    with open(config_path, 'w') as file:
-        yaml.dump(default_config, file)
-
-    print(
-        f"Initialized {NOETRY_YML} with default Python version {default_config['python_version']}.")
+    if not os.path.exists(os.path.join(project_dir, 'requirements.txt')):
+        # create requirements.txt
+        with open(os.path.join(project_dir, 'requirements.txt'), 'w') as f:
+            f.write('')
+        print("Created requirements.txt")
 
     create_virtualenv(project_dir)
+
+    print("🚀 Noetry project initialized successfully!")
+
+
+def install_requirements(project_dir):
+    # Install all packages from requirements.txt
+    venv_dir = os.path.join(project_dir, '.venv')
+    pip_exe = get_pip_exe(venv_dir)
+    subprocess.run([pip_exe, 'install', '-r', 'requirements.txt'])
 
 
 def update_requirements(project_dir):
@@ -114,6 +116,28 @@ def list_packages(project_dir):
 
     pip_exe = get_pip_exe(venv_dir)
     subprocess.run([pip_exe, 'list'])
+
+
+def set_python_version(project_dir, version):
+    print("Setting Python version to: ", version)
+
+    # Check if the specified Python version is installed
+    try:
+        subprocess.run([f"python{version}", "--version"])
+    except FileNotFoundError:
+        print(f"💥 Error: Python {version} not found.")
+        return
+
+    # remove the current virtual environment
+    delete_virtualenv(project_dir)
+    # recreate with the specified Python version
+    create_virtualenv(project_dir, version)
+
+    print(f"🚀 Python version successfully set to: {version}")
+
+
+def get_python_version(project_dir):
+    run_in_venv(project_dir, 'python', '--version')
 
 
 def convert_from_poetry(project_dir):
@@ -145,10 +169,10 @@ def convert_from_poetry(project_dir):
     with open(os.path.join(project_dir, 'requirements.txt'), 'w') as file:
         file.write('\n'.join(requirements))
 
-    # Initialize .noetry.yml
+    # Initialize project
     init_project(project_dir)
 
-    print("Converted Poetry project to Noetry.")
+    print("🚀 Converted Poetry project to Noetry.")
 
 
 def main():
@@ -180,6 +204,8 @@ def main():
             set_python_version(project_dir, args[0])
         else:
             print("Please specify a Python version.")
+    elif cmd == 'get-python':
+        get_python_version(project_dir)
     elif cmd == 'init':
         init_project(project_dir)
     elif cmd == 'convert':
@@ -192,7 +218,7 @@ def main():
     elif cmd == 'list':
         list_packages(project_dir)
     else:
-        print(f"Unknown command: {cmd}")
+        print(f"💥 Unknown command: {cmd}")
         show_help()
 
 
@@ -206,7 +232,8 @@ Commands:
     add <pkg>            - Install a package and add it to requirements.txt
     remove <pkg>         - Uninstall a package and remove it from requirements.txt
     set-python <version> - Set the Python version for the virtual environment
-    init                 - Initialize a new .noetry.yml configuration file
+    get-python           - Get the Python version for the virtual environment
+    init                 - Initialize a new noetry project
     convert              - Convert a Poetry project to a Noetry project
     run <cmd>            - Run a command within the virtual environment
     list                 - List all packages installed in the virtual environment

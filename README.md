@@ -24,15 +24,15 @@ pip install git+https://github.com/JHart96/noetry.git
 
 Get started with the following commands:
 
+- Initialize a Noetry project: `noetry init`
 - Create a new virtual environment: `noetry create`
 - Delete the virtual environment: `noetry delete`
 - Add a package: `noetry add <pkg>`
 - Remove a package: `noetry remove <pkg>`
 - Set Python version: `noetry set-python <version>`
-- Initialize a Noetry project: `noetry init`
+- List all packages: `noetry list`
 - Convert a Poetry project: `noetry convert`
 - Run a command in the virtual environment: `noetry run <cmd>`
-- List all packages: `noetry list`
 
 For more details, run `noetry` without arguments to see the help text.
 
