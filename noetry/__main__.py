@@ -3,6 +3,7 @@ import sys
 import subprocess
 import venv
 import toml
+import re
 
 
 def create_virtualenv(project_dir, python_version="3.10"):
@@ -121,11 +122,15 @@ def list_packages(project_dir):
 def set_python_version(project_dir, version):
     print("Setting Python version to: ", version)
 
-    # Check if the specified Python version is installed
-    try:
-        subprocess.run([f"python{version}", "--version"])
-    except FileNotFoundError:
-        print(f"💥 Error: Python {version} not found.")
+    # Check Python version, capture output, and pattern match with Python x.y.z
+    result = subprocess.run(
+        [f'python{version}', '-V'], capture_output=True, text=True)
+
+    match = re.search(r'Python (\d+\.\d+\.\d+)', result.stdout)
+
+    if not match:
+        print(
+            f"💥 Error: Python {version} is not installed on your system. Please install it to continue.")
         return
 
     # remove the current virtual environment
@@ -163,7 +168,14 @@ def convert_from_poetry(project_dir):
     # Convert TOML format to requirements.txt format
     requirements = []
     for name, version in {**dependencies, **dev_dependencies}.items():
-        requirements.append(f"{name}{version}")
+        if version == "*":
+            requirements.append(name)
+        elif version.startswith("^"):
+            requirements.append(f"{name}>={version[1:]}")
+        elif version.startswith("~"):
+            requirements.append(f"{name}>={version[1:]},<{version[1:][:-1]}")
+        else:
+            requirements.append(f"{name}=={version}")
 
     # Write to requirements.txt
     with open(os.path.join(project_dir, 'requirements.txt'), 'w') as file:
@@ -227,13 +239,13 @@ def show_help():
 Noetry - A simple virtual environment and dependency manager
 
 Commands:
+    init                 - Initialize a new noetry project
     create               - Create a new virtual environment for the project
     delete               - Delete the virtual environment for the project
     add <pkg>            - Install a package and add it to requirements.txt
     remove <pkg>         - Uninstall a package and remove it from requirements.txt
     set-python <version> - Set the Python version for the virtual environment
     get-python           - Get the Python version for the virtual environment
-    init                 - Initialize a new noetry project
     convert              - Convert a Poetry project to a Noetry project
     run <cmd>            - Run a command within the virtual environment
     list                 - List all packages installed in the virtual environment
